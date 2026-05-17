@@ -397,7 +397,7 @@
 
     /* ── NOTE TOOLBAR (appears on text selection) ── */
     .note-toolbar {
-        position: absolute; z-index: 170;
+        position: fixed; z-index: 170;
         background: rgba(20,18,15,0.94); backdrop-filter: blur(12px);
         border: 1px solid rgba(212,168,83,0.35); border-radius: 22px;
         padding: 6px 10px; display: none; align-items: center; gap: 6px;
@@ -3142,26 +3142,57 @@
         renderNoteList(notes);
     }
 
+    // Ensure node is an element (not a text node)
+    function ensureElement(node) {
+        return node.nodeType === 3 ? node.parentElement : node;
+    }
+
     // Generate a unique selector for the selected text position
-    function getTextSelector(node, offset) {
-        const sectionRow = node.closest('.section-row');
+    // Uses the full range to compute start + end offsets in the filtered text
+    function getTextSelector(range) {
+        var startNode = range.startContainer;
+        var startOff = range.startOffset;
+        var endNode = range.endContainer;
+        var endOff = range.endOffset;
+
+        // Ensure we have text nodes
+        if (startNode.nodeType !== 3) startNode = startNode.childNodes[startOff] || startNode.firstChild;
+        if (endNode.nodeType !== 3) endNode = endNode.childNodes[endOff > 0 ? endOff - 1 : 0] || endNode.lastChild;
+        if (!startNode || !endNode || startNode.nodeType !== 3 || endNode.nodeType !== 3) return null;
+
+        var colEl = startNode.parentElement.closest('.col-en, .col-cn');
+        if (!colEl) return null;
+        var endColEl = endNode.parentElement.closest('.col-en, .col-cn');
+        if (colEl !== endColEl) return null; // selection must be within one column
+        var sectionRow = colEl.closest('.section-row');
         if (!sectionRow) return null;
-        const book = sectionRow.dataset.book;
-        const section = sectionRow.dataset.section;
-        const colEn = sectionRow.querySelector('.col-en');
-        // Find relative position within the section
-        const fullText = colEn.textContent;
-        // Walk up to count text offset
-        const walker = document.createTreeWalker(colEn, NodeFilter.SHOW_TEXT, null, false);
-        let totalOffset = 0;
+
+        var book = sectionRow.dataset.book;
+        var section = sectionRow.dataset.section;
+        var lang = colEl.classList.contains('col-cn') ? 'cn' : 'en';
+
+        // Walk filtered text nodes to find start and end offsets
+        var filter = {
+            acceptNode: function(n) {
+                if (n.parentElement.closest('.vocab, .long-sentence, .note-highlight')) return NodeFilter.FILTER_SKIP;
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        };
+        var walker = document.createTreeWalker(colEl, NodeFilter.SHOW_TEXT, filter, false);
+        var startOffset = -1, endOffset = -1, total = 0;
         while (walker.nextNode()) {
-            if (walker.currentNode === node) {
-                totalOffset += offset;
+            if (walker.currentNode === startNode && startOffset < 0) {
+                startOffset = total + startOff;
+            }
+            if (walker.currentNode === endNode) {
+                endOffset = total + endOff;
                 break;
             }
-            totalOffset += walker.currentNode.textContent.length;
+            total += walker.currentNode.textContent.length;
         }
-        return { book, section, offset: totalOffset, length: selectedText.length };
+        if (startOffset < 0 || endOffset < 0 || endOffset <= startOffset) return null;
+
+        return { book: book, section: section, offset: startOffset, length: endOffset - startOffset, lang: lang };
     }
 
     function showNoteToolbar(x, y) {
@@ -3176,50 +3207,45 @@
 
     // Handle text selection
     function handleSelection(e) {
-        // Ignore if interacting with existing UI
-        if (e.target.closest('.vocab, .long-sentence, .note-highlight, .popover, .note-sidebar, .note-toolbar, .key-panel, .sent-panel, .chapter-jump-btn, .chapter-jump-panel, .sidebar-toggle, button, .toolbar, .toc')) return;
+        // Only ignore clicks on UI chrome (not inline annotation spans)
+        var uiEl = e.target.closest ? e.target.closest('.popover, .note-sidebar, .note-toolbar, .key-panel, .sent-panel, .chapter-jump-btn, .chapter-jump-panel, .sidebar-toggle, .toolbar, .toc, button.note-toolbar-btn, button.sidebar-toggle, button.note-sidebar-close, button.key-panel-close, button.sent-panel-close, button.pop-close, .fs-btn, button.chapter-jump-btn') : null;
+        if (uiEl) return;
 
-        setTimeout(() => {
-            const sel = window.getSelection();
-            const text = sel.toString().trim();
+        var delay = e.type === 'touchend' ? 300 : 10;
+        setTimeout(function() {
+            var sel = window.getSelection();
+            var text = sel.toString().trim();
             if (!text || text.length < 3 || text.length > 800) { hideNoteToolbar(); return; }
 
             // Check if inside main content
-            if (!sel.anchorNode || !sel.anchorNode.parentElement.closest('.col-en, .col-cn')) { hideNoteToolbar(); return; }
+            var anchorEl = sel.anchorNode ? (sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode) : null;
+            if (!anchorEl || !anchorEl.closest('.col-en, .col-cn')) { hideNoteToolbar(); return; }
 
             selectedRange = sel.getRangeAt(0).cloneRange();
             selectedText = text;
 
-            const rect = sel.getRangeAt(0).getBoundingClientRect();
-            let x = rect.left + rect.width / 2 - 60;
-            let y = rect.top - 48;
+            var rect = sel.getRangeAt(0).getBoundingClientRect();
+            var x = rect.left + rect.width / 2 - 60;
+            var y = rect.top - 48;
             if (y < 60) y = rect.bottom + 10;
             if (x < 10) x = 10;
             if (x + 140 > window.innerWidth) x = window.innerWidth - 150;
             showNoteToolbar(x, y);
-        }, 10);
+        }, delay);
     }
 
     document.addEventListener('mouseup', handleSelection);
-    document.addEventListener('touchend', function(e) {
-        // On mobile, delay slightly to let selection complete
-        setTimeout(() => handleSelection(e), 300);
-    });
+    document.addEventListener('touchend', handleSelection);
 
     // Add note
     function addNote() {
         if (!selectedText) return;
         const notes = loadNotes();
-        // Compute selector
         const range = selectedRange;
-        const node = range.startContainer;
-        const offset = range.startOffset;
-        const sel = getTextSelector(node, offset);
+        const sel = getTextSelector(range);
         if (!sel) return;
 
-        const sectionRow = node.closest('.section-row');
-        const colEl = node.parentElement.closest('.col-en') || node.parentElement.closest('.col-cn');
-        const lang = colEl && colEl.classList.contains('col-cn') ? 'cn' : 'en';
+        const lang = sel.lang;
 
         // Check for duplicate
         const dup = notes.find(n => n.book === sel.book && n.section === sel.section && n.offset === sel.offset);
