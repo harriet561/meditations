@@ -44,16 +44,19 @@
         position: relative;
     }
 
-    /* ── Fixed background layer (iOS-compatible) ── */
-    .bg-layer {
+    /* ── Fixed background layer with crossfade (iOS-compatible) ── */
+    .bg-layer, .bg-layer-2 {
         position: fixed; inset: 0; z-index: 0;
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
-        transition: background-image 1.5s ease-in-out;
+        transition: opacity 3s ease-in-out;
     }
+    .bg-layer-2 { opacity: 0; }
+    .bg-layer-2.active { opacity: 1; }
     /* iOS Safari doesn't support background-attachment: fixed on body,
-       so we use a dedicated position:fixed div instead. */
+       so we use dedicated position:fixed divs instead.
+       Two layers crossfade by toggling opacity. */
 
     /* ── Background overlay for readability ── */
     .bg-overlay {
@@ -297,6 +300,161 @@
     body.hide-nonkey .vocab { color: inherit; border-bottom: none; cursor: text; }
     body.hide-nonkey .long-sentence { border-left: none; padding-left: 0; cursor: text; }
 
+    /* ── CHAPTER JUMP ── */
+    .chapter-jump-btn {
+        position: fixed; bottom: 28px; left: 28px; z-index: 150;
+        width: 46px; height: 46px; border-radius: 50%;
+        background: rgba(20,18,15,0.85); border: 1px solid rgba(212,168,83,0.35);
+        color: var(--accent); font-family: var(--font-cn); font-size: 1.1em;
+        cursor: pointer; backdrop-filter: blur(8px);
+        transition: all 0.25s;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 2px 16px rgba(0,0,0,0.4);
+    }
+    .chapter-jump-btn:hover { background: rgba(212,168,83,0.2); border-color: var(--accent); }
+    .chapter-jump-panel {
+        position: fixed; bottom: 84px; left: 28px; z-index: 150;
+        background: rgba(20,18,15,0.92); backdrop-filter: blur(16px);
+        border: 1px solid rgba(212,168,83,0.3); border-radius: 14px;
+        padding: 16px; display: none;
+        grid-template-columns: repeat(4, 1fr); gap: 8px;
+        max-width: 320px; box-shadow: 0 4px 32px rgba(0,0,0,0.5);
+    }
+    .chapter-jump-panel.show { display: grid; }
+    .chapter-jump-panel a {
+        font-family: var(--font-cn); font-size: 0.85em; color: var(--text-dim);
+        text-decoration: none; padding: 8px 12px; text-align: center;
+        border-radius: 8px; transition: all 0.2s;
+        border: 1px solid rgba(255,255,255,0.06);
+    }
+    .chapter-jump-panel a:hover, .chapter-jump-panel a.active {
+        background: rgba(212,168,83,0.15); color: var(--accent);
+        border-color: rgba(212,168,83,0.3);
+    }
+
+    /* ── NOTE SIDEBAR ── */
+    .note-sidebar {
+        position: fixed; top: 0; right: 0; z-index: 180;
+        width: 360px; height: 100vh;
+        background: rgba(18,16,12,0.94); backdrop-filter: blur(20px);
+        border-left: 1px solid rgba(212,168,83,0.2);
+        transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.22,0.61,0.36,1);
+        display: flex; flex-direction: column;
+        box-shadow: -4px 0 40px rgba(0,0,0,0.5);
+    }
+    .note-sidebar.show { transform: translateX(0); }
+    .note-sidebar-header {
+        padding: 20px 22px; border-bottom: 1px solid rgba(212,168,83,0.15);
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .note-sidebar-header h3 {
+        font-family: var(--font-cn); font-size: 1.15em; color: var(--accent);
+        letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;
+    }
+    .note-sidebar-close {
+        background: none; border: none; color: var(--text-dim); font-size: 1.4em;
+        cursor: pointer; padding: 4px 8px; transition: color 0.2s;
+    }
+    .note-sidebar-close:hover { color: var(--accent); }
+    .note-list {
+        flex: 1; overflow-y: auto; padding: 16px;
+        scrollbar-width: thin; scrollbar-color: rgba(212,168,83,0.2) transparent;
+    }
+    .note-list::-webkit-scrollbar { width: 4px; }
+    .note-list::-webkit-scrollbar-track { background: transparent; }
+    .note-list::-webkit-scrollbar-thumb { background: rgba(212,168,83,0.2); border-radius: 2px; }
+    .note-item {
+        padding: 14px 16px; margin-bottom: 12px;
+        background: rgba(212,168,83,0.06); border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 10px; cursor: pointer; transition: all 0.2s;
+        position: relative;
+    }
+    .note-item:hover { background: rgba(212,168,83,0.12); border-color: rgba(212,168,83,0.25); }
+    .note-item .note-text {
+        font-family: var(--font-cn); font-size: 0.88em; color: var(--text-dim);
+        line-height: 1.5; margin-bottom: 6px;
+    }
+    .note-item .note-quote {
+        font-family: var(--font-en); font-size: 0.78em; color: var(--accent);
+        font-style: italic; white-space: nowrap; overflow: hidden;
+        text-overflow: ellipsis; margin-bottom: 6px;
+        padding-left: 8px; border-left: 2px solid rgba(212,168,83,0.3);
+    }
+    .note-item .note-meta {
+        font-size: 0.72em; color: rgba(255,255,255,0.3);
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .note-delete-btn {
+        background: none; border: none; color: rgba(255,255,255,0.25);
+        cursor: pointer; font-size: 1.1em; padding: 2px 6px; transition: color 0.2s;
+        border-radius: 50%;
+    }
+    .note-delete-btn:hover { color: #e88; }
+    .note-empty {
+        text-align: center; padding: 60px 20px;
+        font-family: var(--font-cn); color: rgba(255,255,255,0.2); font-size: 0.9em;
+    }
+
+    /* ── NOTE TOOLBAR (appears on text selection) ── */
+    .note-toolbar {
+        position: absolute; z-index: 170;
+        background: rgba(20,18,15,0.94); backdrop-filter: blur(12px);
+        border: 1px solid rgba(212,168,83,0.35); border-radius: 22px;
+        padding: 6px 10px; display: none; align-items: center; gap: 6px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    }
+    .note-toolbar.show { display: flex; }
+    .note-toolbar-btn {
+        width: 34px; height: 34px; border-radius: 50%;
+        border: 1px solid rgba(255,255,255,0.08); cursor: pointer;
+        transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+        font-size: 0.95em;
+    }
+    .note-toolbar-btn.add-note {
+        background: rgba(212,168,83,0.12); color: var(--accent);
+        border-color: rgba(212,168,83,0.3);
+    }
+    .note-toolbar-btn.add-note:hover {
+        background: rgba(212,168,83,0.28); border-color: var(--accent);
+    }
+
+    /* ── NOTE HIGHLIGHT ON TEXT ── */
+    .note-highlight {
+        background: rgba(212,168,83,0.22);
+        border-bottom: 2px dotted rgba(212,168,83,0.5);
+        cursor: pointer; border-radius: 2px;
+        transition: background 0.3s;
+    }
+    .note-highlight:hover { background: rgba(212,168,83,0.35); }
+    .note-highlight.flash-pulse {
+        animation: note-flash 2s ease-out;
+    }
+    @keyframes note-flash {
+        0% { background: rgba(255,220,120,0.55); }
+        100% { background: rgba(212,168,83,0.22); }
+    }
+
+    /* ── SIDEBAR TOGGLE BUTTON ── */
+    .sidebar-toggle {
+        position: fixed; bottom: 28px; right: 28px; z-index: 150;
+        width: 46px; height: 46px; border-radius: 50%;
+        background: rgba(20,18,15,0.85); border: 1px solid rgba(212,168,83,0.35);
+        color: var(--accent); cursor: pointer; backdrop-filter: blur(8px);
+        transition: all 0.25s;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 2px 16px rgba(0,0,0,0.4);
+        font-size: 1.1em;
+    }
+    .sidebar-toggle:hover { background: rgba(212,168,83,0.2); border-color: var(--accent); }
+    .sidebar-toggle .badge {
+        position: absolute; top: -4px; right: -4px;
+        background: var(--accent); color: #1a1a1a;
+        font-size: 0.65em; font-weight: 700; font-family: var(--font-ui);
+        min-width: 18px; height: 18px; border-radius: 9px;
+        display: flex; align-items: center; justify-content: center;
+        padding: 0 4px;
+    }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 768px) {
         .section-row {
@@ -312,6 +470,9 @@
         .toolbar button { font-size: 0.75em; padding: 5px 10px; }
         :root { --col-gap: 10px; }
         .popover, .key-panel, .sent-panel { max-width: 90vw; }
+        .note-sidebar { width: 85vw; }
+        .chapter-jump-panel { max-width: 260px; grid-template-columns: repeat(3, 1fr); }
+        .chapter-jump-btn, .sidebar-toggle { width: 40px; height: 40px; }
     }
     @media (max-width: 480px) {
         :root { --fs: 15px; --lh: 1.7; }
@@ -319,6 +480,10 @@
         .site-header h1 { font-size: 1.4em; }
         .toc-link { font-size: 0.78em; padding: 4px 10px; }
         .book-title { font-size: 1.2em; }
+        .note-sidebar { width: 100vw; }
+        .chapter-jump-panel { max-width: 200px; grid-template-columns: repeat(3, 1fr); left: 8px; bottom: 80px; }
+        .chapter-jump-btn { bottom: 20px; left: 20px; }
+        .sidebar-toggle { bottom: 20px; right: 20px; }
     }
 </style>
 </head>
@@ -327,6 +492,7 @@
 
 <!-- Fixed background layer (iOS-compatible) -->
 <div class="bg-layer" id="bgLayer"></div>
+<div class="bg-layer-2" id="bgLayer2"></div>
 <div class="bg-overlay"></div>
 
 <!-- Floral decorations -->
@@ -382,6 +548,38 @@
     <button class="sent-panel-close" id="sentPanelClose">&times;</button>
     <div class="sent-panel-title">📖 长句解析</div>
     <div id="sentPanelContent"></div>
+</div>
+
+<!-- Chapter jump button & panel -->
+<button class="chapter-jump-btn" id="chapterJumpBtn" title="章节跳转" aria-label="章节跳转">卷</button>
+<div class="chapter-jump-panel" id="chapterJumpPanel">
+    <a href="#book-1" data-book="1">卷一</a><a href="#book-2" data-book="2">卷二</a>
+    <a href="#book-3" data-book="3">卷三</a><a href="#book-4" data-book="4">卷四</a>
+    <a href="#book-5" data-book="5">卷五</a><a href="#book-6" data-book="6">卷六</a>
+    <a href="#book-7" data-book="7">卷七</a><a href="#book-8" data-book="8">卷八</a>
+    <a href="#book-9" data-book="9">卷九</a><a href="#book-10" data-book="10">卷十</a>
+    <a href="#book-11" data-book="11">卷十一</a><a href="#book-12" data-book="12">卷十二</a>
+</div>
+
+<!-- Note toolbar (appears on text selection) -->
+<div class="note-toolbar" id="noteToolbar">
+    <button class="note-toolbar-btn add-note" id="addNoteBtn" title="添加笔记">&#9998;</button>
+</div>
+
+<!-- Note sidebar toggle button -->
+<button class="sidebar-toggle" id="sidebarToggle" title="我的笔记" aria-label="我的笔记">
+    &#128221;<span class="badge" id="noteBadge" style="display:none">0</span>
+</button>
+
+<!-- Note sidebar -->
+<div class="note-sidebar" id="noteSidebar">
+    <div class="note-sidebar-header">
+        <h3>&#9728; 我的笔记</h3>
+        <button class="note-sidebar-close" id="noteSidebarClose">&times;</button>
+    </div>
+    <div class="note-list" id="noteList">
+        <div class="note-empty">尚未添加笔记<br>选中文本即可添加</div>
+    </div>
 </div>
 
 <!-- Main Content -->
@@ -2761,14 +2959,34 @@
 (function() {
     'use strict';
     const root = document.documentElement;
+    const LS = 'meditations-';
+    const BG_IMAGES = ["bg1/bianhua1.jpg", "bg1/bianhua2.jpg", "bg1/bianhua3.jpg", "bg1/bianhua4.jpg", "bg1/bianhua5.jpg"];
 
-    // ══════════ BACKGROUND ROTATION ══════════
-    const bgImages = ["bg1/bianhua1.jpg", "bg1/bianhua2.jpg", "bg1/bianhua3.jpg", "bg1/bianhua4.jpg", "bg1/bianhua5.jpg"];
-    let bgIdx = 0;
-    function rotateBg() {
-        document.getElementById('bgLayer').style.backgroundImage = `url(${bgImages[bgIdx]})`;
-        bgIdx = (bgIdx + 1) % bgImages.length;
+    // ══════════ BACKGROUND CROSSFADE ══════════
+    const bgLayer = document.getElementById('bgLayer');
+    const bgLayer2 = document.getElementById('bgLayer2');
+    let bgIdx = 0, activeLayer = 1; // 1=bgLayer visible, 2=bgLayer2 visible
+
+    function preloadImgs() {
+        BG_IMAGES.forEach(src => { const img = new Image(); img.src = src; });
     }
+    function rotateBg() {
+        const nextImg = BG_IMAGES[bgIdx];
+        if (activeLayer === 1) {
+            bgLayer2.style.backgroundImage = `url(${nextImg})`;
+            bgLayer2.classList.add('active');
+            bgLayer.classList.remove('active');
+            activeLayer = 2;
+        } else {
+            bgLayer.style.backgroundImage = `url(${nextImg})`;
+            bgLayer.classList.add('active');
+            bgLayer2.classList.remove('active');
+            activeLayer = 1;
+        }
+        bgIdx = (bgIdx + 1) % BG_IMAGES.length;
+        preloadImgs();
+    }
+    preloadImgs();
     rotateBg();
     setInterval(rotateBg, 30000);
 
@@ -2777,103 +2995,74 @@
     const fsDisplay = document.getElementById('fsDisplay');
     function updateFs() {
         root.style.setProperty('--fs', fontSize + 'px');
-        fsDisplay.textContent = `${fontSize}px`;
-        localStorage.setItem('meditations-fs', fontSize);
+        fsDisplay.textContent = fontSize + 'px';
+        localStorage.setItem(LS + 'fs', fontSize);
     }
-    document.getElementById('fsPlus').addEventListener('click', () => {
-        if (fontSize < 26) { fontSize++; updateFs(); }
-    });
-    document.getElementById('fsMinus').addEventListener('click', () => {
-        if (fontSize > 12) { fontSize--; updateFs(); }
-    });
-    const savedFs = localStorage.getItem('meditations-fs');
+    document.getElementById('fsPlus').addEventListener('click', () => { if (fontSize < 26) { fontSize++; updateFs(); } });
+    document.getElementById('fsMinus').addEventListener('click', () => { if (fontSize > 12) { fontSize--; updateFs(); } });
+    const savedFs = localStorage.getItem(LS + 'fs');
     if (savedFs) { fontSize = parseInt(savedFs); updateFs(); }
 
     // ══════════ ANNOTATION TOGGLE ══════════
     const toggleAnnot = document.getElementById('toggleAnnot');
     toggleAnnot.addEventListener('change', () => {
-        if (toggleAnnot.checked) {
-            document.body.classList.remove('hide-nonkey');
-        } else {
-            document.body.classList.add('hide-nonkey');
-        }
-        localStorage.setItem('meditations-annot', toggleAnnot.checked ? 'full' : 'keyonly');
+        document.body.classList.toggle('hide-nonkey', !toggleAnnot.checked);
+        localStorage.setItem(LS + 'annot', toggleAnnot.checked ? 'full' : 'keyonly');
     });
-    const savedAnnot = localStorage.getItem('meditations-annot');
-    if (savedAnnot === 'keyonly') {
-        toggleAnnot.checked = false;
-        document.body.classList.add('hide-nonkey');
+    if (localStorage.getItem(LS + 'annot') === 'keyonly') {
+        toggleAnnot.checked = false; document.body.classList.add('hide-nonkey');
     }
 
     // ══════════ READING PROGRESS ══════════
     const progressBar = document.getElementById('progressBar');
     const progressText = document.getElementById('progressText');
-    const mainContent = document.getElementById('mainContent');
     function updateProgress() {
-        const scrollTop = window.scrollY;
-        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-        const pct = docHeight > 0 ? Math.min(100, Math.round(scrollTop / docHeight * 100)) : 0;
+        const docH = document.documentElement.scrollHeight - window.innerHeight;
+        const pct = docH > 0 ? Math.min(100, Math.round(window.scrollY / docH * 100)) : 0;
         progressBar.style.width = pct + '%';
         progressText.textContent = pct + '%';
-        if (pct > 0) localStorage.setItem('meditations-progress', scrollTop);
+        if (pct > 0) localStorage.setItem(LS + 'progress', window.scrollY);
     }
     window.addEventListener('scroll', updateProgress, { passive: true });
-    const savedProgress = localStorage.getItem('meditations-progress');
-    if (savedProgress) {
-        setTimeout(() => window.scrollTo({ top: parseInt(savedProgress), behavior: 'smooth' }), 300);
-    }
+    const savedProgress = localStorage.getItem(LS + 'progress');
+    if (savedProgress) setTimeout(() => window.scrollTo({ top: parseInt(savedProgress), behavior: 'smooth' }), 300);
 
     // ══════════ POPOVER (VOCAB TOOLTIP) ══════════
     const popover = document.getElementById('popover');
-    const popWord = document.getElementById('popWord');
-    const popPos = document.getElementById('popPos');
-    const popCn = document.getElementById('popCn');
-    const popEx = document.getElementById('popEx');
-    const popClose = document.getElementById('popClose');
+    const popWord = document.getElementById('popWord'), popPos = document.getElementById('popPos');
+    const popCn = document.getElementById('popCn'), popEx = document.getElementById('popEx');
     let activeVocab = null;
-
     function hidePopover() {
         popover.style.display = 'none';
-        if (activeVocab) activeVocab.classList.remove('vocab-active');
-        activeVocab = null;
+        if (activeVocab) { activeVocab.classList.remove('vocab-active'); activeVocab = null; }
     }
-
-    popClose.addEventListener('click', hidePopover);
-    document.addEventListener('click', (e) => {
-        if (!popover.contains(e.target) && e.target !== activeVocab) hidePopover();
-    });
-
+    document.getElementById('popClose').addEventListener('click', hidePopover);
+    document.addEventListener('click', (e) => { if (!popover.contains(e.target) && e.target !== activeVocab) hidePopover(); });
     document.querySelectorAll('.vocab').forEach(el => {
         el.addEventListener('click', function(e) {
             e.stopPropagation();
             if (activeVocab === this) { hidePopover(); return; }
             if (activeVocab) activeVocab.classList.remove('vocab-active');
-            activeVocab = this;
-            this.classList.add('vocab-active');
-            popWord.textContent = this.dataset.word;
-            popPos.textContent = this.dataset.pos;
-            popCn.textContent = this.dataset.cn;
-            popEx.textContent = this.dataset.ex;
+            activeVocab = this; this.classList.add('vocab-active');
+            popWord.textContent = this.dataset.word; popPos.textContent = this.dataset.pos;
+            popCn.textContent = this.dataset.cn; popEx.textContent = this.dataset.ex;
             popover.style.display = 'block';
             const rect = this.getBoundingClientRect();
             let top = rect.bottom + 8, left = rect.left;
             if (top + 180 > window.innerHeight) top = rect.top - 190;
             if (left + 420 > window.innerWidth) left = window.innerWidth - 430;
             if (left < 10) left = 10;
-            popover.style.top = top + 'px';
-            popover.style.left = left + 'px';
+            popover.style.top = top + 'px'; popover.style.left = left + 'px';
         });
     });
 
     // ══════════ KEY PASSAGE PANEL ══════════
     const keyPanel = document.getElementById('keyPanel');
     const keyPanelContent = document.getElementById('keyPanelContent');
-    const keyPanelClose = document.getElementById('keyPanelClose');
-    keyPanelClose.addEventListener('click', () => keyPanel.classList.remove('show'));
-
+    document.getElementById('keyPanelClose').addEventListener('click', () => keyPanel.classList.remove('show'));
     document.querySelectorAll('.section-row.key-passage').forEach(row => {
         row.addEventListener('click', function(e) {
-            if (e.target.closest('.vocab') || e.target.closest('.long-sentence')) return;
+            if (e.target.closest('.vocab') || e.target.closest('.long-sentence') || e.target.closest('.note-highlight')) return;
             keyPanelContent.textContent = this.dataset.keyComment;
             keyPanel.classList.add('show');
         });
@@ -2882,9 +3071,7 @@
     // ══════════ LONG SENTENCE PANEL ══════════
     const sentPanel = document.getElementById('sentPanel');
     const sentPanelContent = document.getElementById('sentPanelContent');
-    const sentPanelClose = document.getElementById('sentPanelClose');
-    sentPanelClose.addEventListener('click', () => sentPanel.classList.remove('show'));
-
+    document.getElementById('sentPanelClose').addEventListener('click', () => sentPanel.classList.remove('show'));
     document.querySelectorAll('.long-sentence').forEach(el => {
         el.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -2898,28 +3085,332 @@
     const bookWrappers = document.querySelectorAll('.book-wrapper');
     function updateToc() {
         let current = null;
-        bookWrappers.forEach(w => {
-            const rect = w.getBoundingClientRect();
-            if (rect.top <= 120) current = w.id;
-        });
-        tocLinks.forEach(l => {
-            l.classList.toggle('active', l.dataset.book === (current ? current.replace('book-', '') : null));
-        });
+        bookWrappers.forEach(w => { if (w.getBoundingClientRect().top <= 120) current = w.id; });
+        tocLinks.forEach(l => l.classList.toggle('active', l.dataset.book === (current || '').replace('book-', '')));
     }
     window.addEventListener('scroll', updateToc, { passive: true });
-
-    // ══════════ SMOOTH SCROLL FOR TOC ══════════
     tocLinks.forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
-            const target = document.getElementById(this.getAttribute('href').replace('#', ''));
-            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const t = document.getElementById(this.getAttribute('href').replace('#', ''));
+            if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
     });
 
+    // ══════════ CHAPTER JUMP ══════════
+    const chapterJumpBtn = document.getElementById('chapterJumpBtn');
+    const chapterJumpPanel = document.getElementById('chapterJumpPanel');
+    function toggleJumpPanel(e) { e.stopPropagation(); chapterJumpPanel.classList.toggle('show'); }
+    chapterJumpBtn.addEventListener('click', toggleJumpPanel);
+    document.addEventListener('click', (e) => {
+        if (!chapterJumpPanel.contains(e.target) && e.target !== chapterJumpBtn) chapterJumpPanel.classList.remove('show');
+    });
+    chapterJumpPanel.querySelectorAll('a').forEach(a => {
+        a.addEventListener('click', function(e) {
+            e.preventDefault();
+            const t = document.getElementById(this.getAttribute('href').replace('#', ''));
+            if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            chapterJumpPanel.classList.remove('show');
+        });
+    });
+    function updateJumpPanel() {
+        let current = null;
+        bookWrappers.forEach(w => { if (w.getBoundingClientRect().top <= 120) current = w.id; });
+        const curBook = (current || '').replace('book-', '');
+        chapterJumpPanel.querySelectorAll('a').forEach(a => a.classList.toggle('active', a.dataset.book === curBook));
+        chapterJumpBtn.textContent = curBook ? '卷'+curBook : '卷';
+    }
+    window.addEventListener('scroll', updateJumpPanel, { passive: true });
+
+    // ══════════ NOTE SYSTEM ══════════
+    const noteSidebar = document.getElementById('noteSidebar');
+    const noteList = document.getElementById('noteList');
+    const noteBadge = document.getElementById('noteBadge');
+    const noteToolbar = document.getElementById('noteToolbar');
+    const addNoteBtn = document.getElementById('addNoteBtn');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const noteSidebarClose = document.getElementById('noteSidebarClose');
+    let selectedRange = null, selectedText = '';
+
+    // Load notes from localStorage
+    function loadNotes() {
+        try { return JSON.parse(localStorage.getItem(LS + 'notes') || '[]'); }
+        catch(e) { return []; }
+    }
+    function saveNotes(notes) {
+        localStorage.setItem(LS + 'notes', JSON.stringify(notes));
+        renderNoteList(notes);
+    }
+
+    // Generate a unique selector for the selected text position
+    function getTextSelector(node, offset) {
+        const sectionRow = node.closest('.section-row');
+        if (!sectionRow) return null;
+        const book = sectionRow.dataset.book;
+        const section = sectionRow.dataset.section;
+        const colEn = sectionRow.querySelector('.col-en');
+        // Find relative position within the section
+        const fullText = colEn.textContent;
+        // Walk up to count text offset
+        const walker = document.createTreeWalker(colEn, NodeFilter.SHOW_TEXT, null, false);
+        let totalOffset = 0;
+        while (walker.nextNode()) {
+            if (walker.currentNode === node) {
+                totalOffset += offset;
+                break;
+            }
+            totalOffset += walker.currentNode.textContent.length;
+        }
+        return { book, section, offset: totalOffset, length: selectedText.length };
+    }
+
+    function showNoteToolbar(x, y) {
+        noteToolbar.style.left = x + 'px';
+        noteToolbar.style.top = y + 'px';
+        noteToolbar.classList.add('show');
+    }
+    function hideNoteToolbar() {
+        noteToolbar.classList.remove('show');
+        selectedRange = null; selectedText = '';
+    }
+
+    // Handle text selection
+    function handleSelection(e) {
+        // Ignore if interacting with existing UI
+        if (e.target.closest('.vocab, .long-sentence, .note-highlight, .popover, .note-sidebar, .note-toolbar, .key-panel, .sent-panel, .chapter-jump-btn, .chapter-jump-panel, .sidebar-toggle, button, .toolbar, .toc')) return;
+
+        setTimeout(() => {
+            const sel = window.getSelection();
+            const text = sel.toString().trim();
+            if (!text || text.length < 3 || text.length > 800) { hideNoteToolbar(); return; }
+
+            // Check if inside main content
+            if (!sel.anchorNode || !sel.anchorNode.parentElement.closest('.col-en, .col-cn')) { hideNoteToolbar(); return; }
+
+            selectedRange = sel.getRangeAt(0).cloneRange();
+            selectedText = text;
+
+            const rect = sel.getRangeAt(0).getBoundingClientRect();
+            let x = rect.left + rect.width / 2 - 60;
+            let y = rect.top - 48;
+            if (y < 60) y = rect.bottom + 10;
+            if (x < 10) x = 10;
+            if (x + 140 > window.innerWidth) x = window.innerWidth - 150;
+            showNoteToolbar(x, y);
+        }, 10);
+    }
+
+    document.addEventListener('mouseup', handleSelection);
+    document.addEventListener('touchend', function(e) {
+        // On mobile, delay slightly to let selection complete
+        setTimeout(() => handleSelection(e), 300);
+    });
+
+    // Add note
+    function addNote() {
+        if (!selectedText) return;
+        const notes = loadNotes();
+        // Compute selector
+        const range = selectedRange;
+        const node = range.startContainer;
+        const offset = range.startOffset;
+        const sel = getTextSelector(node, offset);
+        if (!sel) return;
+
+        const sectionRow = node.closest('.section-row');
+        const colEl = node.parentElement.closest('.col-en') || node.parentElement.closest('.col-cn');
+        const lang = colEl && colEl.classList.contains('col-cn') ? 'cn' : 'en';
+
+        // Check for duplicate
+        const dup = notes.find(n => n.book === sel.book && n.section === sel.section && n.offset === sel.offset);
+        if (dup) { hideNoteToolbar(); return; }
+
+        // Prompt for note text (optional)
+        const noteText = prompt('为这段文字添加笔记（可选）：', '');
+        if (noteText === null) { hideNoteToolbar(); return; } // cancelled
+
+        const note = {
+            id: Date.now(),
+            book: sel.book,
+            section: sel.section,
+            offset: sel.offset,
+            length: sel.length,
+            lang: lang,
+            quote: selectedText.substring(0, 120),
+            note: noteText || '',
+            time: new Date().toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        };
+
+        notes.push(note);
+        saveNotes(notes);
+        applyNoteHighlights(notes);
+        hideNoteToolbar();
+        window.getSelection().removeAllRanges();
+    }
+
+    addNoteBtn.addEventListener('click', addNote);
+
+    // Apply highlights to all saved notes
+    function applyNoteHighlights(notes) {
+        // Remove existing highlights
+        document.querySelectorAll('.note-highlight').forEach(el => {
+            const parent = el.parentNode;
+            parent.replaceChild(document.createTextNode(el.textContent), el);
+            parent.normalize();
+        });
+
+        // Apply each note
+        notes.forEach(note => {
+            const sectionRow = document.querySelector(`.section-row[data-book="${note.book}"][data-section="${note.section}"]`);
+            if (!sectionRow) return;
+            const colEl = note.lang === 'cn' ? sectionRow.querySelector('.col-cn') : sectionRow.querySelector('.col-en');
+            if (!colEl) return;
+
+            // Find text node at offset
+            const walker = document.createTreeWalker(colEl, NodeFilter.SHOW_TEXT, {
+                acceptNode: function(n) {
+                    if (n.parentElement.closest('.vocab, .long-sentence, .note-highlight')) return NodeFilter.FILTER_SKIP;
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            }, false);
+
+            let currentOffset = 0, targetNode = null, nodeStartOffset = 0;
+            while (walker.nextNode()) {
+                const len = walker.currentNode.textContent.length;
+                if (currentOffset + len > note.offset) {
+                    targetNode = walker.currentNode;
+                    nodeStartOffset = currentOffset;
+                    break;
+                }
+                currentOffset += len;
+            }
+            if (!targetNode) return;
+
+            const localOffset = note.offset - nodeStartOffset;
+            const endOffset = localOffset + note.length;
+            if (endOffset > targetNode.textContent.length) return;
+
+            const span = document.createElement('span');
+            span.className = 'note-highlight';
+            span.dataset.noteId = note.id;
+            span.title = note.note || note.quote;
+            const range = document.createRange();
+            range.setStart(targetNode, localOffset);
+            range.setEnd(targetNode, endOffset);
+            range.surroundContents(span);
+        });
+
+        // Bind click on highlights
+        document.querySelectorAll('.note-highlight').forEach(el => {
+            el.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const noteId = parseInt(this.dataset.noteId);
+                if (confirm('删除这条笔记吗？')) {
+                    deleteNoteById(noteId);
+                }
+            });
+        });
+    }
+
+    function deleteNoteById(id) {
+        let notes = loadNotes();
+        notes = notes.filter(n => n.id !== id);
+        saveNotes(notes);
+        applyNoteHighlights(notes);
+    }
+
+    // Render note list in sidebar
+    function renderNoteList(notes) {
+        noteList.innerHTML = '';
+        if (notes.length === 0) {
+            noteList.innerHTML = '<div class="note-empty">尚未添加笔记<br>选中文本即可添加</div>';
+            noteBadge.style.display = 'none';
+        } else {
+            noteBadge.style.display = 'flex';
+            noteBadge.textContent = notes.length;
+            // Sort by book/section
+            notes.sort((a, b) => a.book - b.book || a.section - b.section || a.offset - b.offset);
+            notes.forEach(note => {
+                const div = document.createElement('div');
+                div.className = 'note-item';
+                div.innerHTML = `
+                    <div class="note-quote">${escHtml(note.quote)}</div>
+                    ${note.note ? '<div class="note-text">' + escHtml(note.note) + '</div>' : ''}
+                    <div class="note-meta">
+                        <span>卷${note.book}·${note.section}节 · ${note.time}</span>
+                        <button class="note-delete-btn" data-id="${note.id}" title="删除笔记">&times;</button>
+                    </div>`;
+                div.addEventListener('click', function(e) {
+                    if (e.target.closest('.note-delete-btn')) return;
+                    scrollToNote(note);
+                });
+                noteList.appendChild(div);
+            });
+            // Bind delete buttons
+            noteList.querySelectorAll('.note-delete-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (confirm('删除这条笔记吗？')) deleteNoteById(parseInt(this.dataset.id));
+                });
+            });
+        }
+    }
+
+    function escHtml(s) {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    function scrollToNote(note) {
+        const sectionRow = document.querySelector(`.section-row[data-book="${note.book}"][data-section="${note.section}"]`);
+        if (!sectionRow) return;
+        sectionRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Flash the highlight
+        setTimeout(() => {
+            const hl = document.querySelector(`.note-highlight[data-note-id="${note.id}"]`);
+            if (hl) {
+                hl.classList.add('flash-pulse');
+                setTimeout(() => hl.classList.remove('flash-pulse'), 2000);
+            }
+        }, 500);
+        noteSidebar.classList.remove('show');
+    }
+
+    // Sidebar toggle
+    sidebarToggle.addEventListener('click', () => noteSidebar.classList.toggle('show'));
+    noteSidebarClose.addEventListener('click', () => noteSidebar.classList.remove('show'));
+
+    // Close sidebar on outside click (optional: mobile-friendly)
+    document.addEventListener('click', function(e) {
+        if (noteSidebar.classList.contains('show') &&
+            !noteSidebar.contains(e.target) &&
+            e.target !== sidebarToggle &&
+            !sidebarToggle.contains(e.target)) {
+            noteSidebar.classList.remove('show');
+        }
+    });
+
+    // Click outside note toolbar to hide
+    document.addEventListener('click', function(e) {
+        if (noteToolbar.classList.contains('show') &&
+            !noteToolbar.contains(e.target)) {
+            hideNoteToolbar();
+        }
+    });
+
+    // Initialize notes
+    const allNotes = loadNotes();
+    renderNoteList(allNotes);
+    applyNoteHighlights(allNotes);
+
     // ══════════ KEYBOARD SHORTCUTS ══════════
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') { hidePopover(); keyPanel.classList.remove('show'); sentPanel.classList.remove('show'); }
+        if (e.key === 'Escape') {
+            hidePopover(); hideNoteToolbar();
+            keyPanel.classList.remove('show'); sentPanel.classList.remove('show');
+            chapterJumpPanel.classList.remove('show'); noteSidebar.classList.remove('show');
+        }
         if (e.ctrlKey && e.key === '=') { e.preventDefault(); if (fontSize < 26) { fontSize++; updateFs(); } }
         if (e.ctrlKey && e.key === '-') { e.preventDefault(); if (fontSize > 12) { fontSize--; updateFs(); } }
     });
